@@ -1,0 +1,22 @@
+{
+  "name": "back",
+  "version": "1.0.0",
+  "description": "project brain",
+  "license": "MIT",
+  "author": "Abdannasser Mbarki",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js",
+    "dev": "npx nodemon src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "genetic-js": "^0.1.14",
+    "lodash-es": "^4.17.22",
+    "mongoose": "^9.0.2",
+    "nodeman": "^1.1.2"
+  }
+}
