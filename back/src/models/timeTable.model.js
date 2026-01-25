@@ -34,7 +34,7 @@ const timetableSchema = new Schema({
         default: []
     },
     generationConfig: {
-        days: { type: [String], default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] },
+        days: { type: [String], default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"] },
         timeSlots: { type: [Schema.Types.Mixed], default: [] },
         allowedSessionDurationsMinutes: { type: [Number], default: [] }
     },

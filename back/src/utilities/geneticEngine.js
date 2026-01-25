@@ -5,34 +5,47 @@ let task = []
 
 export const evolve = (initialSessions, availableRooms, timeSlots, fitnessOptions = {}) => {
     let population = [];
-    const POP_SIZE = 200;
-    const GENERATIONS = 300;
+    const POP_SIZE = 50;
+    const GENERATIONS = 100;
     const days = Array.isArray(fitnessOptions?.days) && fitnessOptions.days.length > 0
         ? fitnessOptions.days
-        : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"];
+
+    const effectiveFitnessOptions = {
+        ...fitnessOptions,
+        timeSlots
+    };
 
 
     // 1. Initialize: Assign random room/time to the Admin's sessions
+    console.log("Initializing population...");
     for (let i = 0; i < POP_SIZE; i++) {
         const individual = initialSessions.map(session => ({
             ...session,
             day: sample(days),
-            startTime: sample(timeSlots).start,
-            endTime: sample(timeSlots).end,
+            ...(function () {
+                const pickedSlot = sample(timeSlots);
+                return { startTime: pickedSlot.start, endTime: pickedSlot.end };
+            })(),
             room: sample(availableRooms)._id
         }));
         population.push(individual);
+        //console.log(population);
     }
 
 
     // 2. Evolution Loop
+    console.log("Starting evolution...");
     for (let g = 0; g < GENERATIONS; g++) {
-        // Sort by fitness
-        population.sort((a, b) => 
-            calculateFitness(b, availableRooms, fitnessOptions) - calculateFitness(a, availableRooms, fitnessOptions)
-        );
+        // Sort by fitness (cache to avoid recomputing during sort)
+        const scored = population
+            .map((p) => ({ p, score: calculateFitness(p, availableRooms, effectiveFitnessOptions) }))
+            .sort((a, b) => b.score - a.score);
 
-        if (calculateFitness(population[0], availableRooms, fitnessOptions) === 0) break; // Perfect score!
+        population = scored.map((x) => x.p);
+
+        if (scored[0]?.score === 0) break; // Perfect score!
+
 
         // Keep the best (Elitism)
         let nextGen = population.slice(0, 5);
@@ -47,6 +60,8 @@ export const evolve = (initialSessions, availableRooms, timeSlots, fitnessOption
     }
 
 
+    console.log("Evolution complete.");
+    //console.log(population);
     return population[0]; // Return the best timetable found
 };
 

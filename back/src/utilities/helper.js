@@ -210,7 +210,7 @@ export {
   HOURS,
   isMorning,
   isEvening,
-  isUnavailableDay,
+  isUnavailableDay, //removed
   isDayPreference,
   isTimePreference,
   getSessionDurationMinutes,

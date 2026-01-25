@@ -20,11 +20,6 @@ const roomSchema= new Schema(
             default: []
         },
 
-        type:{
-            type: String,
-            enum: ['lecture', 'lab', 'seminar'],
-            default: 'lecture'
-        },
     },
     {
         timestamps:true

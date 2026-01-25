@@ -130,7 +130,7 @@ const generateTimetable = async (req, res) => {
 
         const usedDays = Array.isArray(days) && days.length > 0
             ? days
-            : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+            : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"];
 
         const defaultTimeSlots = [
             { start: "08:15", end: "09:45" },
@@ -140,7 +140,7 @@ const generateTimetable = async (req, res) => {
             { start: "16:45", end: "18:15" }
         ];
         const usedTimeSlots = Array.isArray(timeSlots) && timeSlots.length > 0 ? timeSlots : defaultTimeSlots;
-
+        //change it to get the preferences and subkjects by group id 
         const [availableRooms, preferences, subjects] = await Promise.all([
             Room.find(),
             Preference.find(),
@@ -151,12 +151,12 @@ const generateTimetable = async (req, res) => {
         for (const p of preferences) {
             preferencesByTeacher[p.teacher.toString()] = p;
         }
-
+        // subject by code?
         const subjectsById = {};
         for (const s of subjects) {
             subjectsById[s._id.toString()] = s;
         }
-
+        //change it to get session by group name/speciallity
         const initialSessions = Array.isArray(sessions) && sessions.length > 0
             ? sessions
             : await Session.find().lean();
@@ -172,7 +172,11 @@ const generateTimetable = async (req, res) => {
         const fitnessOptions = {
             preferencesByTeacher,
             subjectsById,
-            days: usedDays
+            days: usedDays,
+            timeSlots: usedTimeSlots,
+            allowedSessionDurationsMinutes: Array.isArray(allowedSessionDurationsMinutes)
+                ? allowedSessionDurationsMinutes
+                : []
         };
 
         const best = evolve(initialSessions, availableRooms, usedTimeSlots, fitnessOptions);

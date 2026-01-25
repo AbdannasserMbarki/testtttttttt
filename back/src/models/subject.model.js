@@ -16,10 +16,6 @@ const subjectSchema= new Schema(
             required: true,
             unique: true,
         },
-        houresparweek:{
-            type: Number,
-            required: true,
-        },
         totalHours:{
             type: Number,
         },

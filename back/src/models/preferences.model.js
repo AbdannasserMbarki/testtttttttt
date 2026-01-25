@@ -8,12 +8,6 @@ const preferenceSchema = new Schema(
             required: true,
             unique: true 
         },
-        // Hard Constraints: Days they absolutely cannot work
-        unavailableDays: {
-            type: [String],
-            enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            default: []
-        },
         // Soft Constraints: Preferred time slots
         timePreferences: [
             {
@@ -28,13 +22,6 @@ const preferenceSchema = new Schema(
                 },
             }
         ],
-
-        maxHoursPerWeek: {
-            type: Number,
-            default: 30,
-            min: 1,
-            max: 40
-        },
     },
     { timestamps: true }
 );

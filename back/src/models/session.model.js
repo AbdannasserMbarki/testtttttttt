@@ -17,11 +17,6 @@ const sessionSchema = new Schema(
             ref: "groupe", 
             required: true 
         },
-        
-        room: { 
-            type: Schema.Types.ObjectId, 
-            ref: "Room", 
-        },
       
     },
     { timestamps: true }
