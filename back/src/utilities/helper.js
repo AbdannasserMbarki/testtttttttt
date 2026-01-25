@@ -52,6 +52,93 @@ const getSessionDurationMinutes = (session) => {
   return Math.max(0, timeToMinutes(session.endTime) - timeToMinutes(session.startTime));
 };
 
+const normalizeTimeSlots = (timeSlots) => {
+  return Array.isArray(timeSlots)
+    ? timeSlots
+        .filter((ts) => ts && typeof ts.start === "string" && typeof ts.end === "string")
+        .map((ts) => ({ start: ts.start, end: ts.end }))
+    : [];
+};
+
+const buildTimeSlotSet = (timeSlots) => {
+  const normalized = normalizeTimeSlots(timeSlots);
+  if (normalized.length === 0) return null;
+  return new Set(normalized.map((ts) => `${ts.start}::${ts.end}`));
+};
+
+const countTimeSlotAlignmentViolations = (sessions = [], timeSlots = null) => {
+  const slotSet = buildTimeSlotSet(timeSlots);
+  if (!slotSet) return 0;
+
+  let violations = 0;
+  for (const s of sessions) {
+    if (!s?.startTime || !s?.endTime) continue;
+    if (!slotSet.has(`${s.startTime}::${s.endTime}`)) {
+      violations++;
+    }
+  }
+  return violations;
+};
+
+const countSessionDurationViolations = (sessions = [], options = {}) => {
+  const {
+    sessionLengthMinutes = null,
+    allowedSessionDurationsMinutes = null
+  } = options || {};
+
+  const allowedDurations = Array.isArray(allowedSessionDurationsMinutes) && allowedSessionDurationsMinutes.length > 0
+    ? allowedSessionDurationsMinutes
+        .map((d) => Number(d))
+        .filter((d) => Number.isFinite(d) && d > 0)
+    : null;
+
+  let violations = 0;
+  for (const s of sessions) {
+    if (!s?.startTime || !s?.endTime) continue;
+    const duration = getSessionDurationMinutes(s);
+
+    if (typeof sessionLengthMinutes === "number" && Number.isFinite(sessionLengthMinutes)) {
+      if (duration !== sessionLengthMinutes) violations++;
+    } else if (allowedDurations) {
+      if (!allowedDurations.includes(duration)) violations++;
+    }
+  }
+
+  return violations;
+};
+
+const countBackToBackViolations = (sessions = [], options = {}) => {
+  const { minBreakMinutes = 15 } = options || {};
+  const minBreak = Number.isFinite(Number(minBreakMinutes)) ? Number(minBreakMinutes) : 0;
+  if (minBreak <= 0) return 0;
+
+  const byDayEntity = new Map();
+  const addBucket = (day, entityType, entityId, session) => {
+    if (!day || !entityId || !session?.startTime || !session?.endTime) return;
+    const key = `${day}::${entityType}::${entityId?.toString?.() ?? entityId}`;
+    if (!byDayEntity.has(key)) byDayEntity.set(key, []);
+    byDayEntity.get(key).push(session);
+  };
+
+  for (const s of sessions) {
+    addBucket(s?.day, "teacher", s?.teacher, s);
+    addBucket(s?.day, "group", s?.group, s);
+  }
+
+  let violations = 0;
+  for (const bucket of byDayEntity.values()) {
+    bucket.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    for (let i = 0; i < bucket.length - 1; i++) {
+      const current = bucket[i];
+      const next = bucket[i + 1];
+      const gap = timeToMinutes(next.startTime) - timeToMinutes(current.endTime);
+      if (gap < minBreak) violations++;
+    }
+  }
+
+  return violations;
+};
+
 const checkNoOverlaps = (sessions = []) => {
   const conflicts = [];
 
@@ -210,10 +297,14 @@ export {
   HOURS,
   isMorning,
   isEvening,
-  isUnavailableDay, //removed
   isDayPreference,
   isTimePreference,
   getSessionDurationMinutes,
+  normalizeTimeSlots,
+  buildTimeSlotSet,
+  countTimeSlotAlignmentViolations,
+  countSessionDurationViolations,
+  countBackToBackViolations,
   checkNoOverlaps,
   checkTeacherPreferences,
   checkWeeklyHours,
