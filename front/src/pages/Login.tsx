@@ -1,8 +1,9 @@
 import type React from 'react';
 import { useState } from 'react';
 import { Lock, Mail, ShieldCheck, GraduationCap, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { INITIAL_DATA } from '../constants';
 import type { AuthUser } from '../types';
+import { api } from '../api';
+import { setAuthCookie } from '../authCookie';
 
 interface LoginPageProps {
   onLogin: (user: AuthUser) => void;
@@ -15,48 +16,26 @@ export const Login: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
-    setTimeout(() => {
-      // 1. Check Admin Credentials
-      if (email.toLowerCase() === 'admin@university.edu' && password === 'admin') {
-        onLogin({
-          id: 'admin',
-          name: 'System Administrator',
-          email: 'admin@university.edu',
-          role: 'admin',
-          avatarUrl: 'https://ui-avatars.com/api/?name=System+Admin&background=0f172a&color=fff'
-        });
-        return;
-      } 
-      
-      // 2. Check Teacher Credentials
-      // Matches email against INITIAL_DATA
-      const teacher = INITIAL_DATA.teachers.find(t => t.email.toLowerCase() === email.toLowerCase());
-      
-      // Allow any password for demo purposes if email exists (and not admin)
-      if (teacher) {
-         // In a real app, verify password hash here
-         onLogin({
-           id: teacher.id,
-           name: teacher.name,
-           email: teacher.email,
-           role: 'teacher',
-           avatarUrl: teacher.avatarUrl,
-           department: teacher.department
-         });
-         return;
-      }
-
-      // 3. Failed
-      setError('Invalid credentials. Please check your email and password.');
+    try {
+      const resp = await api.login(email, password);
+      const user: AuthUser = {
+        id: resp.user.id,
+        name: resp.user.username,
+        email: resp.user.email,
+        role: resp.user.isadmin ? 'admin' : 'teacher',
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(resp.user.username)}&background=0f172a&color=fff`
+      };
+      setAuthCookie(user);
+      onLogin(user);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Login failed');
       setIsLoading(false);
-      
-    }, 800);
+    }
   };
 
   return (
@@ -186,7 +165,7 @@ export const Login: React.FC<LoginPageProps> = ({ onLogin }) => {
           </form>
           
           <div className="mt-8 text-center text-xs text-slate-400">
-             Tip: Use 'admin@university.edu' (pass: admin) or 's.connor@tus.edu'
+             Tip: Use 'teacher1@univ.tn' (admin) or 'teacher(((i)))@univ.tn' (normal) pass: password123
           </div>
         </div>
       </div>

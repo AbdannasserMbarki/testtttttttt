@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Sun, 
   Moon, 
@@ -15,6 +15,7 @@ import {
 import type { TimetableData, PreferenceSlot, TimePreference } from '../types';
 import { DayOfWeek } from '../types';
 import { TimetableGrid } from './TimetableGrid';
+import { api } from '../api';
 
 interface TeacherPortalProps {
   teacherId: string;
@@ -34,12 +35,41 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({ teacherId, data })
   const [activeTab, setActiveTab] = useState<'preferences' | 'timetable'>('preferences');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [prefError, setPrefError] = useState<string>('');
+  const [isDeletingPref, setIsDeletingPref] = useState(false);
 
   const teacher = data.teachers.find(t => t.id === teacherId);
   const teacherSessions = data.sessions.filter(s => s.teacherId === teacherId);
 
   // State for the list of added preferences
   const [preferences, setPreferences] = useState<TimePreference[]>([]);
+
+  useEffect(() => {
+    const loadPrefs = async () => {
+      setPrefError('');
+      try {
+        const resp = await api.getPreferenceByTeacher(teacherId);
+        const mapped: TimePreference[] = Array.isArray(resp.preference?.timePreferences)
+          ? resp.preference.timePreferences
+              .filter((tp) => tp && typeof tp.day === 'string')
+              .map((tp) => ({
+                day: tp.day as any,
+                slot: tp.slot
+              }))
+          : [];
+        setPreferences(mapped);
+      } catch (e) {
+        // 404 => no preference yet; that's fine
+        if (e instanceof Error && e.message.toLowerCase().includes('not found')) {
+          setPreferences([]);
+          return;
+        }
+        setPrefError(e instanceof Error ? e.message : 'Failed to load preferences');
+      }
+    };
+
+    void loadPrefs();
+  }, [teacherId]);
 
   // State for the "Add New Preference" form
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DayOfWeek.MONDAY);
@@ -65,12 +95,38 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({ teacherId, data })
   };
 
   const handleSave = () => {
-    setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
-      setLastSaved(new Date());
-    }, 1000);
+    const save = async () => {
+      setIsSaving(true);
+      setPrefError('');
+      try {
+        await api.upsertPreferenceByTeacher(teacherId, preferences);
+        setLastSaved(new Date());
+      } catch (e) {
+        setPrefError(e instanceof Error ? e.message : 'Failed to save preferences');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    void save();
+  };
+
+  const handleDeletePreferences = () => {
+    const run = async () => {
+      setIsDeletingPref(true);
+      setPrefError('');
+      try {
+        await api.deletePreferenceByTeacher(teacherId);
+        setPreferences([]);
+        setLastSaved(new Date());
+      } catch (e) {
+        setPrefError(e instanceof Error ? e.message : 'Failed to delete preferences');
+      } finally {
+        setIsDeletingPref(false);
+      }
+    };
+
+    void run();
   };
 
   const getSlotIcon = (slot: PreferenceSlot) => {
@@ -101,6 +157,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({ teacherId, data })
 
   return (
     <div className="flex flex-col h-full space-y-6">
+      {prefError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {prefError}
+        </div>
+      )}
       {/* Header Section */}
       <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
@@ -144,19 +205,43 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({ teacherId, data })
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'timetable' ? (
-          <TimetableGrid 
-            sessions={teacherSessions} 
-            data={data} 
-            title="My Weekly Schedule" 
-            subtitle={`${teacher.name} - ${teacher.department}`}
-          />
+          data.meta.isPublished ? (
+            <TimetableGrid 
+              sessions={teacherSessions} 
+              data={data} 
+              title="My Weekly Schedule" 
+              subtitle={`${teacher.name} - ${teacher.department}`}
+            />
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full flex items-center justify-center p-8">
+              <div className="max-w-lg text-center">
+                <div className="text-lg font-bold text-slate-900">Timetable not published</div>
+                <div className="text-slate-500 text-sm mt-2">
+                  Your timetable will be visible once an admin publishes it.
+                </div>
+              </div>
+            </div>
+          )
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col">
             <div className="p-6 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">Availability Preferences</h2>
-              <p className="text-slate-500 text-sm mt-1">
-                Add specific days and times you prefer to teach.
-              </p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Availability Preferences</h2>
+                  <p className="text-slate-500 text-sm mt-1">
+                    Add specific days and times you prefer to teach.
+                  </p>
+                </div>
+                <button
+                  onClick={handleDeletePreferences}
+                  disabled={isDeletingPref}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="Delete my saved preferences"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeletingPref ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

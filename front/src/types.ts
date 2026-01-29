@@ -68,7 +68,7 @@ export interface TimetableData {
   sessions: Session[];
 }
 
-export type ViewMode = 'dashboard' | 'overview' | 'teachers' | 'groups' | 'rooms' | 'my-portal';
+export type ViewMode = 'dashboard' | 'overview' | 'timetables' | 'teachers' | 'groups' | 'rooms' | 'admin' | 'my-portal';
 
 // Preference Types
 export type PreferenceSlot = 'morning' | 'evening' | 'any';

@@ -2,6 +2,8 @@ import type React from 'react';
 import { 
   LayoutDashboard, 
   Calendar, 
+  History,
+  Shield,
   Users, 
   GraduationCap, 
   DoorOpen, 
@@ -19,6 +21,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, user, onLogout }) => {
+  const isTeacherOnly = user?.role === 'teacher';
+
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300">
       <div className="p-6 border-b border-slate-200 flex items-center gap-3">
@@ -27,41 +31,59 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, user,
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-4">Main Menu</div>
-        <SidebarItem 
-          icon={LayoutDashboard} 
-          label="Dashboard" 
-          active={currentView === 'dashboard'} 
-          onClick={() => onNavigate('dashboard')} 
-        />
-        <SidebarItem 
-          icon={Calendar} 
-          label="Weekly Overview" 
-          active={currentView === 'overview'} 
-          onClick={() => onNavigate('overview')} 
-        />
-        
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 mt-8 px-4">Resources</div>
-        <SidebarItem 
-          icon={Users} 
-          label="Teachers" 
-          active={currentView === 'teachers'} 
-          onClick={() => onNavigate('teachers')} 
-        />
-        <SidebarItem 
-          icon={GraduationCap} 
-          label="Student Groups" 
-          active={currentView === 'groups'} 
-          onClick={() => onNavigate('groups')} 
-        />
-        <SidebarItem 
-          icon={DoorOpen} 
-          label="Rooms" 
-          active={currentView === 'rooms'} 
-          onClick={() => onNavigate('rooms')} 
-        />
+        {!isTeacherOnly && (
+          <>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-4">Main Menu</div>
+            <SidebarItem 
+              icon={LayoutDashboard} 
+              label="Dashboard" 
+              active={currentView === 'dashboard'} 
+              onClick={() => onNavigate('dashboard')} 
+            />
+            <SidebarItem 
+              icon={Calendar} 
+              label="Weekly Overview" 
+              active={currentView === 'overview'} 
+              onClick={() => onNavigate('overview')} 
+            />
 
-        {/* Show "Teacher Portal" if the user is a teacher OR an admin (since admin is also a teacher) */}
+            <SidebarItem 
+              icon={History} 
+              label="Timetables" 
+              active={currentView === 'timetables'} 
+              onClick={() => onNavigate('timetables')} 
+            />
+
+            <SidebarItem 
+              icon={Shield} 
+              label="Admin Panel" 
+              active={currentView === 'admin'} 
+              onClick={() => onNavigate('admin')} 
+            />
+            
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 mt-8 px-4">Resources</div>
+            <SidebarItem 
+              icon={Users} 
+              label="Teachers" 
+              active={currentView === 'teachers'} 
+              onClick={() => onNavigate('teachers')} 
+            />
+            <SidebarItem 
+              icon={GraduationCap} 
+              label="Student Groups" 
+              active={currentView === 'groups'} 
+              onClick={() => onNavigate('groups')} 
+            />
+            <SidebarItem 
+              icon={DoorOpen} 
+              label="Rooms" 
+              active={currentView === 'rooms'} 
+              onClick={() => onNavigate('rooms')} 
+            />
+          </>
+        )}
+
+        {/* Teacher Portal */}
         {(user?.role === 'teacher' || user?.role === 'admin') && (
           <>
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 mt-8 px-4">Personal</div>
