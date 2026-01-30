@@ -21,6 +21,7 @@ import { RoomsPage } from './pages/Rooms';
 import { Login } from './pages/Login';
 import { getAuthCookie, clearAuthCookie } from './authCookie';
 import { AdminPanel } from './pages/AdminPanel';
+import { AdminTimetableEditor } from './pages/AdminTimetableEditor';
 
 const App = () => {
   // Authentication State
@@ -37,6 +38,8 @@ const App = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isEditingTimetable, setIsEditingTimetable] = useState(false);
+  const [timetableReloadToken, setTimetableReloadToken] = useState(0);
 
   useEffect(() => {
     const restored = getAuthCookie();
@@ -150,7 +153,11 @@ const App = () => {
     };
 
     void load();
-  }, [user, selectedTimetableId]);
+  }, [user, selectedTimetableId, timetableReloadToken]);
+
+  const reloadTimetable = () => {
+    setTimetableReloadToken((n) => n + 1);
+  };
 
   const handleSelectTimetable = (id: string) => {
     setSelectedTimetableId(id);
@@ -374,6 +381,16 @@ const App = () => {
                 </button>
               )}
 
+              {user?.role === 'admin' && currentView === 'overview' && selectedTimetableId && (
+                <button
+                  onClick={() => setIsEditingTimetable(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                  title="Edit timetable by drag & drop"
+                >
+                  Edit (Drag & Drop)
+                </button>
+              )}
+
               {/* Publish Badge */}
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${data.meta.isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {data.meta.isPublished ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
@@ -421,7 +438,18 @@ const App = () => {
                 </div>
               ) : (
                 <div className="h-full min-h-[600px]">
-                  <TimetableGrid sessions={data.sessions} data={data} title="Master Timetable" subtitle="All sessions across all departments" />
+                  {user.role === 'admin' && isEditingTimetable && selectedTimetableId ? (
+                    <AdminTimetableEditor
+                      timetableId={selectedTimetableId}
+                      onClose={() => setIsEditingTimetable(false)}
+                      onSaved={() => {
+                        setIsEditingTimetable(false);
+                        reloadTimetable();
+                      }}
+                    />
+                  ) : (
+                    <TimetableGrid sessions={data.sessions} data={data} title="Master Timetable" subtitle="All sessions across all departments" />
+                  )}
                 </div>
               )
             )}
